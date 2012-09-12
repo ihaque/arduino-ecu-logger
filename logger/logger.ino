@@ -2,6 +2,7 @@
 
 #include "defaults.h"
 #include "Canbus.h"
+#include "mcp2515.h"
 extern CanbusClass Canbus;
 
 SoftwareSerial sLCD =  SoftwareSerial(0, CAN_BUS_LCD_TX); 
@@ -274,8 +275,47 @@ void dump_pids(void)
 
 }
 
+bool get_CAN_msg(tCAN *pmsg, unsigned timeout_ms) {
+    unsigned long start = millis();
+    while (!mcp2515_check_message()) {
+        if ((millis() - start) > timeout_ms) return false;
+    }
+    mcp2515_get_message(pmsg);
+    return true;
+}
+
 void can_spy(void) {
-    
+    tCAN msg;
+    unsigned long start = millis();
+    int msg_count = 0;
+    // 10fps
+    const int update_period = 1000;
+    const int updates_per_sec = 1000 / update_period;
+    unsigned long last_update = start - update_period;
+    char buf[17];
+start_spy:
+    clear_lcd();
+    sLCD.write(COMMAND);
+    sLCD.write(LINE0);
+    sLCD.print("Messages/sec:");
+    while (get_CAN_msg(&msg, 10000U)) {
+        msg_count++;
+        if (millis() - last_update > update_period) {
+            sLCD.write(COMMAND);
+            sLCD.write(LINE1);
+            // TODO: the timing here is not correct
+            sprintf(buf, "%d", msg_count * (int) updates_per_sec);
+            sLCD.print(buf);
+            msg_count = 0;
+            last_update = millis();
+        }
+    }
+    sLCD.write(COMMAND);
+    sLCD.write(LINE1);
+    sLCD.print("None in 10 sec");
+    while (1) {
+      if (digitalRead(CLICK) == 0) goto start_spy;
+    }
 }
 
 void clear_lcd(void)
