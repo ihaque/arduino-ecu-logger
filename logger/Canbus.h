@@ -32,7 +32,7 @@
 #define PID_REQUEST         0x7DF
 #define PID_REPLY			0x7E8
 
-static void byte2hex(byte b, char* buf) {
+static void byte2hex(unsigned char b, char* buf) {
     char lut[] = "0123456789ABCDEF";
     buf[0] = lut[b >> 4];
     buf[1] = lut[b & 0xF];

@@ -1,19 +1,5 @@
-/* Welcome to the ECU Reader project. This sketch uses the Canbus library.
-It requires the CAN-bus shield for the Arduino. This shield contains the MCP2515 CAN controller and the MCP2551 CAN-bus driver.
-A connector for an EM406 GPS receiver and an uSDcard holder with 3v level convertor for use in data logging applications.
-The output data can be displayed on a serial LCD.
-
-The SD test functions requires a FAT16 formated card with a text file of WRITE00.TXT in the card.
-
-
-SK Pang Electronics www.skpang.co.uk
-v4.0 04-03-12 Updated for Arduino 1.0
-v3.0 21-02-11  Use library from Adafruit for sd card instead.
-
-*/
-
-#include <SD.h>
 #include <SoftwareSerial.h>
+
 #include "defaults.h"
 #include "Canbus.h"
 extern CanbusClass Canbus;
@@ -24,18 +10,17 @@ SoftwareSerial sLCD =  SoftwareSerial(0, CAN_BUS_LCD_TX);
 #define LINE0   0x80
 #define LINE1   0xC0
 
+// https://code.google.com/p/sdfatlib/
+#include <SdFat.h>
+#include <SdFile.h>
+
+SdFat _sdfat;
 
 char buffer[128];  //Data will be temporarily stored to this buffer before being written to the file
 
-int LED2 = 8;
-int LED3 = 7;
-
-// store error strings in flash to save RAM
-#define error(s) error_P(PSTR(s))
-
-void error_P(const char* str) {
-    PgmPrint("error: ");
-    SerialPrintln_P(str);
+// TODO store error strings in flash to save RAM
+void error(const char* str) {
+    Serial.print("error: ");
     Serial.println(str);
     
     clear_lcd();
@@ -55,7 +40,7 @@ void initJoy(void) {
 
 void initSD() {
   pinMode(CAN_BUS_SD_CS, OUTPUT);
-  if (!SD.begin(CAN_BUS_SD_CS)) {
+  if (!_sdfat.begin(CAN_BUS_SD_CS)) {
     Serial.println("SD initialization failed!");
     return;
   }
@@ -85,14 +70,9 @@ void initLCD(unsigned int baud) {
 
 void setup() {
   Serial.begin(9600);
-  pinMode(LED2, OUTPUT); 
-  pinMode(LED3, OUTPUT); 
- 
-  digitalWrite(LED2, LOW);
-
   initJoy();
   initSD();
-  initLCD(9600U);
+  initLCD(9600);
 
   Serial.println("ECU Reader");  /* For debug use */
   
@@ -156,7 +136,6 @@ void loop() {
    
     
   } 
-  digitalWrite(LED3, HIGH);
    
   if(Canbus.ecu_req(CALC_ENGINE_LOAD,buffer) == 1)
   {
@@ -184,7 +163,6 @@ void loop() {
 //  Canbus.ecu_req(O2_VOLTAGE,buffer);
      
    
-   digitalWrite(LED3, LOW); 
    delay(100); 
    
    
@@ -214,21 +192,6 @@ void logging(void)
   sLCD.write(LINE1);                     /* Move LCD cursor to line 1 */
    sLCD.print("to Stop"); 
   
-  // create a new file
-  /*char name[] = "WRITE00.TXT";
-  for (uint8_t i = 0; i < 100; i++) {
-    name[5] = i/10 + '0';
-    name[6] = i%10 + '0';
-    if (file.open(&root, name, O_CREAT | O_EXCL | O_WRITE)) break;
-  }
-  if (!file.isOpen()) error ("file.create");
-  Serial.print("Writing to: ");
-  Serial.println(name);
-  // write header
-  file.writeError = 0;
-  file.print("READY....");
-  file.println();*/  
-
   while(1)    /* Main logging loop */
   {
     if(Canbus.ecu_req(ENGINE_RPM,buffer) == 1)          /* Request for engine RPM */
@@ -240,7 +203,6 @@ void logging(void)
        //  file.print(',');
     
       } 
-      digitalWrite(LED3, HIGH);
    
       if(Canbus.ecu_req(VEHICLE_SPEED,buffer) == 1)
       {
@@ -270,7 +232,6 @@ void logging(void)
     //  Canbus.ecu_req(O2_VOLTAGE,buffer);
        //file.println();  
   
-       digitalWrite(LED3, LOW); 
  
        if (digitalRead(CLICK) == 0){  /* Check for Click button */
            //file.close();
@@ -294,9 +255,10 @@ void dump_pids(void)
 {
  clear_lcd(); 
  sLCD.print("SD test"); 
- File f = SD.open("/SDtest.txt", FILE_WRITE);
- f.write("Hello, world!");
- f.close();
+ SdFile fp;
+ fp.open("SDtest.txt", O_WRITE | O_TRUNC);
+ fp.write("Hello, world!");
+ fp.close();
 
   if(!Canbus.init(CANSPEED_500))  /* Initialise MCP2515 CAN controller at the specified speed */
   {
@@ -327,11 +289,10 @@ void dump_pids(void)
   sLCD.write("Reading...");
   sLCD.write(COMMAND);
   sLCD.write(LINE1);
-  f = SD.open("/PIDS_SUP.RAW", FILE_WRITE);
-  f.write("\n");
-  f.write("Starting new read\n");
-  f.flush();
-  f.close();
+  fp.open("PIDS_SUP.RAW", O_WRITE | O_APPEND);
+  fp.write("\n");
+  fp.write("Starting new read\n");
+  fp.sync();
   for (int i = 0; i < 7; i++) {
     if (!Canbus.ecu_req(CODES[i], buf + 9*i)) {
             sLCD.write("Done.");
@@ -340,12 +301,11 @@ void dump_pids(void)
             sprintf(buffer,"%d",i);
             sLCD.write(buffer);
     }
-    f = SD.open("/PIDS_SUP.RAW", FILE_WRITE);
-    f.write("\n\r");
-    f.write(buf);
-    Serial.write(buf);
-    f.close();
+    fp.write("\n\r");
+    fp.write(buf);
+    fp.sync();
   }
+  fp.close();
 
  while(1);  /* Don't return */ 
     
