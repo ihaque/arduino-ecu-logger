@@ -16,7 +16,7 @@ SoftwareSerial sLCD =  SoftwareSerial(0, CAN_BUS_LCD_TX);
 
 SdFat _sdfat;
 
-char buffer[128];  //Data will be temporarily stored to this buffer before being written to the file
+char buffer[128];
 
 // TODO store error strings in flash to save RAM
 void error(const char* str) {
@@ -68,17 +68,30 @@ void initLCD(unsigned int baud) {
   return;
 }
 
+void initCAN() {
+  // Initialize MCP2515 CAN controller at the specified speed
+  if(Canbus.init(CANSPEED_500))
+    sLCD.print("CAN Init ok");
+  else {
+    sLCD.print("Can't init CAN");
+    while (1);
+  }
+  delay(500); 
+}
+
 void setup() {
   Serial.begin(9600);
   initJoy();
   initSD();
   initLCD(9600);
+  clear_lcd();
+  initCAN();
 
   Serial.println("ECU Reader");  /* For debug use */
   
   clear_lcd();
  
-  sLCD.print("D:CAN  U:GPS");
+  sLCD.print("D:CAN  U:SPY");
   sLCD.write(COMMAND);
   sLCD.write(LINE1); 
   sLCD.print("L:PIDs R:LOG");
@@ -87,8 +100,9 @@ void setup() {
   {
     
     if (digitalRead(UP) == 0){
-      Serial.println("gps");
-      sLCD.print("GPS");
+      Serial.println("can spy");
+      sLCD.print("SPY");
+      can_spy();
     }
     
     if (digitalRead(DOWN) == 0) {
@@ -112,29 +126,16 @@ void setup() {
   }
   
   clear_lcd();
-  
-  if(Canbus.init(CANSPEED_500))  /* Initialise MCP2515 CAN controller at the specified speed */
-  {
-    sLCD.print("CAN Init ok");
-  } else
-  {
-    sLCD.print("Can't init CAN");
-  } 
-   
-  delay(1000); 
-
 }
  
 
 void loop() {
  
-  if(Canbus.ecu_req(ENGINE_RPM,buffer) == 1)          /* Request for engine RPM */
+  if(Canbus.ecu_req(ENGINE_RPM,buffer) == 1)
   {
-    sLCD.write(COMMAND);                   /* Move LCD cursor to line 0 */
+    sLCD.write(COMMAND);
     sLCD.write(LINE0);
-    sLCD.print(buffer);                         /* Display data on LCD */
-   
-    
+    sLCD.print(buffer);
   } 
    
   if(Canbus.ecu_req(CALC_ENGINE_LOAD,buffer) == 1)
@@ -142,16 +143,13 @@ void loop() {
     sLCD.write(COMMAND);
     sLCD.write(LINE0 + 9);
     sLCD.print(buffer);
-   
   }
   
   if(Canbus.ecu_req(ENGINE_COOLANT_TEMP,buffer) == 1)
   {
     sLCD.write(COMMAND);
-    sLCD.write(LINE1);                     /* Move LCD cursor to line 1 */
+    sLCD.write(LINE1);
     sLCD.print(buffer);
-   
-   
   }
   
   if(Canbus.ecu_req(RELATIVE_THROTTLE,buffer) == 1)
@@ -160,45 +158,26 @@ void loop() {
     sLCD.write(LINE1 + 9);
     sLCD.print(buffer);
   }  
-//  Canbus.ecu_req(O2_VOLTAGE,buffer);
-     
    
-   delay(100); 
-   
-   
-
+  delay(100); 
 }
 
 
 void logging(void)
 {
-  clear_lcd();
-  
-  if(Canbus.init(CANSPEED_500))  /* Initialise MCP2515 CAN controller at the specified speed */
-  {
-    sLCD.print("CAN Init ok");
-  } else
-  {
-    sLCD.print("Can't init CAN");
-  } 
-   
-  delay(500);
-  clear_lcd(); 
-  sLCD.print("Init SD card");  
-  delay(500);
   clear_lcd(); 
   sLCD.print("Press J/S click");  
   sLCD.write(COMMAND);
   sLCD.write(LINE1);                     /* Move LCD cursor to line 1 */
-   sLCD.print("to Stop"); 
+  sLCD.print("to Stop"); 
   
   while(1)    /* Main logging loop */
   {
-    if(Canbus.ecu_req(ENGINE_RPM,buffer) == 1)          /* Request for engine RPM */
+    if(Canbus.ecu_req(ENGINE_RPM,buffer) == 1)
       {
-        sLCD.write(COMMAND);                   /* Move LCD cursor to line 0 */
+        sLCD.write(COMMAND);
         sLCD.write(LINE0);
-        sLCD.print(buffer);                         /* Display data on LCD */
+        sLCD.print(buffer);
        // file.print(buffer);
        //  file.print(',');
     
@@ -216,10 +195,9 @@ void logging(void)
       if(Canbus.ecu_req(ENGINE_COOLANT_TEMP,buffer) == 1)
       {
         sLCD.write(COMMAND);
-        sLCD.write(LINE1);                     /* Move LCD cursor to line 1 */
+        sLCD.write(LINE1);
         sLCD.print(buffer);
         // file.print(buffer);
-       
       }
       
       if(Canbus.ecu_req(THROTTLE,buffer) == 1)
@@ -229,28 +207,20 @@ void logging(void)
         sLCD.print(buffer);
         // file.print(buffer);
       }  
-    //  Canbus.ecu_req(O2_VOLTAGE,buffer);
-       //file.println();  
+      
+      if (digitalRead(CLICK) == 0) {
+        //file.close();
+        Serial.println("Done");
+        sLCD.write(COMMAND);
+        sLCD.write(CLEAR);
   
- 
-       if (digitalRead(CLICK) == 0){  /* Check for Click button */
-           //file.close();
-           Serial.println("Done");
-           sLCD.write(COMMAND);
-           sLCD.write(CLEAR);
-     
-           sLCD.print("DONE");
-          while(1);
-        }
-
+        sLCD.print("DONE");
+        while(1);
+      }
   }
- 
- 
- 
  
 }
      
-
 void dump_pids(void)
 {
  clear_lcd(); 
@@ -259,13 +229,6 @@ void dump_pids(void)
  fp.open("SDtest.txt", O_WRITE | O_TRUNC);
  fp.write("Hello, world!");
  fp.close();
-
-  if(!Canbus.init(CANSPEED_500))  /* Initialise MCP2515 CAN controller at the specified speed */
-  {
-    sLCD.print("Can't init CAN");
-    while (1);
-  } 
-  delay(500);
 
   char buf[9*7 + 1];
   buf[9*7] = 0;
@@ -308,8 +271,11 @@ void dump_pids(void)
   fp.close();
 
  while(1);  /* Don't return */ 
-    
 
+}
+
+void can_spy(void) {
+    
 }
 
 void clear_lcd(void)
