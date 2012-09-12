@@ -153,18 +153,9 @@ uint8_t mcp2515_init(uint8_t speed)
 	spi_putc(SPI_WRITE);
 	spi_putc(CNF3);
 	
-/*	spi_putc((1<<PHSEG21));		// Bitrate 125 kbps at 16 MHz
+	// Set CAN bus rate
+    spi_putc((1<<PHSEG21));
 	spi_putc((1<<BTLMODE)|(1<<PHSEG11));
-	spi_putc((1<<BRP2)|(1<<BRP1)|(1<<BRP0));
-*/
-/*	
-	spi_putc((1<<PHSEG21));		// Bitrate 250 kbps at 16 MHz
-	spi_putc((1<<BTLMODE)|(1<<PHSEG11));
-	spi_putc((1<<BRP1)|(1<<BRP0));
-*/	
-	spi_putc((1<<PHSEG21));		// Bitrate 250 kbps at 16 MHz
-	spi_putc((1<<BTLMODE)|(1<<PHSEG11));
-	//spi_putc(1<<BRP0);
     spi_putc(speed);
 
 	// activate interrupts
@@ -173,8 +164,6 @@ uint8_t mcp2515_init(uint8_t speed)
 	
 	// test if we could read back the value => is the chip accessible?
 	if (mcp2515_read_register(CNF1) != speed) {
-		SET(LED2_HIGH);
-
 		return false;
 	}
 	
@@ -190,7 +179,6 @@ uint8_t mcp2515_init(uint8_t speed)
 	
 	// reset device to normal mode
 	mcp2515_write_register(CANCTRL, 0);
-//	SET(LED2_HIGH);
 	return true;
 }
 
