@@ -133,6 +133,7 @@ char CanbusClass::ecu_req(unsigned char pid,  char *buffer)
                 u16_eng_data = data.A;
                 u16_eng_data = (u16_eng_data * 100U) / 255U;
                 sprintf(buffer, "%u %%", u16_eng_data);
+                break;
 
             case PID_SUPPORT_01_20:
             case PID_SUPPORT_21_40:

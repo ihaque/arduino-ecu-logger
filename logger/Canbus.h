@@ -12,13 +12,14 @@
 #define CANSPEED_500	1		// CAN speed at 500 kbps
 
 
-#define CALC_ENGINE_LOAD    0x04
-#define ENGINE_COOLANT_TEMP 0x05
-#define ENGINE_RPM          0x0C
-#define VEHICLE_SPEED       0x0D
-#define MAF_SENSOR          0x10
-#define THROTTLE            0x11
-#define RELATIVE_THROTTLE   0x45
+#define CALC_ENGINE_LOAD        0x04
+#define ENGINE_COOLANT_TEMP     0x05
+#define ENGINE_RPM              0x0C
+#define VEHICLE_SPEED           0x0D
+#define MAF_SENSOR              0x10
+#define THROTTLE                0x11
+#define RELATIVE_THROTTLE       0x45
+#define O2_EQUIVALENCE_RATIO    0x34
 
 #define PID_SUPPORT_01_20 0x00
 #define PID_SUPPORT_21_40 0x20
