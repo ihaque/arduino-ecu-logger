@@ -324,62 +324,64 @@ start_spy:
 float compute_mpg(void) {
     /* VEHICLE_SPEED gives us speed in kph
      * MAF_SENSOR / 100 gives us gram/s air intake
-     * O2_EQUIVALENCE_RATIO / 2^15 gives us ratio by which we are rich of stoich
+     * O2_LAMBDA / 2^15 gives us ratio by which we are lean of stoich
      *
-     * g air/s  * 1/14.7 g gas/g air * equiv ratio = g gas/sec
+     * g air/s  * 1/14.7 g gas/g air / lambda = g gas/sec
      * g gas/s * 1 lb/454 g * 1 gal/6.701 lb * 3600 s/hr = gal gas/hr
      * speed kph * .621317 = speed mph
      * speed mph / gal gas/hr = mi/gal
      *
-     * SPEED * 0.621317 * 14.7 * 454 * 6.701 / (MAF * EQV * 3600) = mpg
-     * SPEED * 27786 / (MAF * EQV * 3600) = mpg
-     * SPEED * 7.71833 / (MAF * EQV) = mpg
+     * SPEED * 0.621317 * 14.7 * 454 * 6.701 * LAMBDA / (MAF * 3600) = mpg
+     * SPEED * 27786 * LAMBDA / (MAF * 3600) = mpg
+     * SPEED * 7.71833 * LAMBDA / (MAF) = mpg
      *
      * MAF_SENSOR = MAF * 100
-     * O2_EQUIV = EQV * 32768
+     * O2_LAMBDA = LAMBDA * 32768
      *
-     * SPEED * 7.71833 / (MAF_SENSOR / 100 * O2_EQUIV / 32768) = mpg
-     * SPEED * 7.71833 * 100 * 32768 / (MAF_SENSOR * O2_EQUIV) = mpg
-     * SPEED * 25291435.294 / (MAF_SENSOR * O2_EQUIV) = mpg
+     * SPEED * 7.71833 * O2_LAMBDA / 32768 / (MAF_SENSOR / 100) = mpg
+     * SPEED * 7.71833 * O2_LAMBDA * 100 / (MAF_SENSOR * 32768) = mpg
+     * SPEED * O2_LAMBDA / (MAF_SENSOR * 42.45478) = mpg
      */
     tOBD2 data;
     byte speed;
-    unsigned maf_times_100, eqv_times_32k;
+    unsigned maf_times_100, lambda_times_32k;
     float mpg;
     Canbus.obd2_data(VEHICLE_SPEED, &data);
     speed = data.A;
     Canbus.obd2_data(MAF_SENSOR, &data);
     maf_times_100 = ((unsigned)data.A << 8) | data.B;
-    Canbus.obd2_data(O2_EQUIVALENCE_RATIO, &data);
-    eqv_times_32k = ((unsigned)data.A << 8) | data.B;
-    mpg = speed * 25291435.294f;
-    mpg /= (float)maf_times_100 * (float)eqv_times_32k;
+    Canbus.obd2_data(O2_S1_WR_LAMBDA, &data);
+    lambda_times_32k = ((unsigned)data.A << 8) | data.B;
+    mpg = (float(speed) * lambda_times_32k) / (maf_times_100 * 42.45478);
     if (speed == 0) return 0.0f;
     else return mpg;
 }
 
 float consumption_ozph(void) {
     /* MAF_SENSOR / 100 gives us gram/s air intake
-     * O2_EQUIVALENCE_RATIO / 2^15 gives us ratio by which we are rich of stoich
+     * O2_S1_WR_LAMBDA / 2^15 gives us ratio by which we are lean of stoich
      *
-     * g air/s  * 1/14.7 g gas/g air * equiv ratio = g gas/sec
+     * g air/s  * 1/14.7 g gas/g air / lambda = g gas/sec
      * g gas/s * 1 lb/454 g * 1 gal/6.701 lb * 3600 s/hr  * 128 oz/gal = oz gas/hr
      *
-     * (MAF_SENSOR / 100) * (1/14.7) * (O2_EQ / 32768) * (1/454) * (1/6.701) * 3600 * 128
-     * MAF_SENSOR * O2_EQ * 3600 * 128 / (100 * 14.7 * 32768 * 454 * 6.701)
+     * (MAF_SENSOR / 100) * (1/14.7) / (O2_LAMBDA / 32768) * (1/454) * (1/6.701) * 3600 * 128
+     * MAF_SENSOR * 32768 * 3600 * 128 / (100 * 14.7 * O2_LAMBDA * 454 * 6.701)
      *
-     * MAF_SENSOR * O2_EQ / 318017 = oz gas/hr
+     * MAF_SENSOR * 3376.36 / O2_LAMBDA = oz gas/hr
      */
     tOBD2 data;
-    unsigned maf_times_100, eqv_times_32k;
+    unsigned maf_times_100, lambda_times_32k;
     float oz_per_hr;
     Canbus.obd2_data(MAF_SENSOR, &data);
     maf_times_100 = ((unsigned)data.A << 8) | data.B;
-    Canbus.obd2_data(O2_EQUIVALENCE_RATIO, &data);
-    eqv_times_32k = ((unsigned)data.A << 8) | data.B;
-    oz_per_hr = maf_times_100;
-    oz_per_hr *= eqv_times_32k;
-    oz_per_hr /= 318017.0f;
+    Canbus.obd2_data(O2_S1_WR_LAMBDA, &data);
+    lambda_times_32k = ((unsigned)data.A << 8) | data.B;
+    oz_per_hr = (maf_times_100 * 3376.36f) / lambda_times_32k;
+    Serial.print("MAF = ");
+    Serial.println(float(maf_times_100) / 100.0f);
+    Serial.print("O2 LAMBDA =");
+    Serial.println(float(lambda_times_32k) / 32768.0f);
+    Serial.print("\n");
     return oz_per_hr;
 }
 

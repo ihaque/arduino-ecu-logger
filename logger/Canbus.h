@@ -19,7 +19,7 @@
 #define MAF_SENSOR              0x10
 #define THROTTLE                0x11
 #define RELATIVE_THROTTLE       0x45
-#define O2_EQUIVALENCE_RATIO    0x34
+#define O2_S1_WR_LAMBDA         0x34
 
 #define PID_SUPPORT_01_20 0x00
 #define PID_SUPPORT_21_40 0x20
