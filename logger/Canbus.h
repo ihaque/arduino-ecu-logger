@@ -17,9 +17,8 @@
 #define ENGINE_RPM          0x0C
 #define VEHICLE_SPEED       0x0D
 #define MAF_SENSOR          0x10
-#define O2_VOLTAGE          0x14
-#define THROTTLE			0x11
-#define RELATIVE_THROTTLE			0x45
+#define THROTTLE            0x11
+#define RELATIVE_THROTTLE   0x45
 
 #define PID_SUPPORT_01_20 0x00
 #define PID_SUPPORT_21_40 0x20
@@ -39,6 +38,15 @@ static void byte2hex(unsigned char b, char* buf) {
     return;
 }
 
+typedef struct _tOBD2
+{
+    unsigned char pid;
+    unsigned char A;
+    unsigned char B;
+    unsigned char C;
+    unsigned char D;
+} tOBD2;
+
 class CanbusClass
 {
   public:
@@ -48,6 +56,7 @@ class CanbusClass
 	char message_tx(void);
 	char message_rx(unsigned char *buffer);
 	char ecu_req(unsigned char pid,  char *buffer);
+    char obd2_data(unsigned char pid, tOBD2 *data);
 private:
 	
 };

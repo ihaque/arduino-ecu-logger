@@ -99,99 +99,95 @@ return 1;
 
 char CanbusClass::ecu_req(unsigned char pid,  char *buffer) 
 {
+    tOBD2 data;
+    unsigned u16_eng_data = 0;
+    
+    if (obd2_data(pid, &data)) {
+        switch(data.pid) {
+            case ENGINE_RPM: // (A*256 + B)/4 RPM
+                u16_eng_data = data.A;
+                u16_eng_data <<= 8;
+                u16_eng_data |= data.B;
+                u16_eng_data >>= 4;
+                if (data.B & 0x02) u16_eng_data++;
+                sprintf(buffer, "%u rpm", u16_eng_data);
+                break;
+            
+            case ENGINE_COOLANT_TEMP: // A-40 degC
+                sprintf(buffer, "%u degC", (unsigned)(data.A - 40U));
+                break;
+            
+            case VEHICLE_SPEED: // A kph
+                sprintf(buffer, "%u kph", (unsigned) data.A);
+                break;
+            
+            case MAF_SENSOR: //((256*A)+B)/100 g/s
+                u16_eng_data = data.A;
+                u16_eng_data = ((u16_eng_data << 8) | data.B) / 100U;
+                sprintf(buffer, "%u g/s", u16_eng_data);
+                break;
+
+            case THROTTLE:
+            case RELATIVE_THROTTLE:
+            case CALC_ENGINE_LOAD: // A * 100 / 255
+                u16_eng_data = data.A;
+                u16_eng_data = (u16_eng_data * 100U) / 255U;
+                sprintf(buffer, "%u %%", u16_eng_data);
+
+            case PID_SUPPORT_01_20:
+            case PID_SUPPORT_21_40:
+            case PID_SUPPORT_41_60:
+            case PID_SUPPORT_61_80:
+            case PID_SUPPORT_81_A0:
+            case PID_SUPPORT_A1_C0:
+            case PID_SUPPORT_C1_E0:
+                byte2hex(data.A, buffer);
+                byte2hex(data.B, buffer+2);
+                byte2hex(data.C, buffer+4);
+                byte2hex(data.D, buffer+6);
+                break;
+        }
+        return 1;
+    } else {
+        return 0;
+	}
+}
+
+char CanbusClass::obd2_data(unsigned char pid, tOBD2 *data)
+{
 	tCAN message;
-	float engine_data;
 	int timeout = 0;
 	char message_ok = 0;
-	// Prepair message
+
+    // Set up request message
 	message.id = PID_REQUEST;
 	message.header.rtr = 0;
 	message.header.length = 8;
 	message.data[0] = 0x02;
 	message.data[1] = 0x01;
 	message.data[2] = pid;
-	message.data[3] = 0x00;
-	message.data[4] = 0x00;
-	message.data[5] = 0x00;
-	message.data[6] = 0x00;
-	message.data[7] = 0x00;						
-	
+	message.data[3] = message.data[4] = message.data[5] = 0x00;
+    message.data[6] = message.data[7] = 0x00;
 
 	mcp2515_bit_modify(CANCTRL, (1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0), 0);
-//		SET(LED2_HIGH);	
-	if (mcp2515_send_message(&message)) {
-	}
-	
-	while(timeout < 4000)
-	{
-		timeout++;
-				if (mcp2515_check_message()) 
-				{
+	mcp2515_send_message(&message);
 
-					if (mcp2515_get_message(&message)) 
-					{
-							if((message.id == PID_REPLY) && (message.data[2] == pid))	// Check message is the reply and its the right PID
-							{
-								switch(message.data[2])
-								{   /* Details from http://en.wikipedia.org/wiki/OBD-II_PIDs */
-									case ENGINE_RPM:  			//   ((A*256)+B)/4    [RPM]
-									engine_data =  ((message.data[3]*256) + message.data[4])/4;
-									sprintf(buffer,"%d rpm ",(int) engine_data);
-									break;
-							
-									case ENGINE_COOLANT_TEMP: 	// 	A-40			  [degree C]
-									engine_data =  message.data[3] - 40;
-									sprintf(buffer,"%d degC",(int) engine_data);
-							
-									break;
-							
-									case VEHICLE_SPEED: 		// A				  [km]
-									engine_data =  message.data[3];
-									sprintf(buffer,"%d kph",(int) engine_data);
-							
-									break;
-
-									case MAF_SENSOR:   			// ((256*A)+B) / 100  [g/s]
-									engine_data =  ((message.data[3]*256) + message.data[4])/100;
-									sprintf(buffer,"%d g/s",(int) engine_data);
-							
-									break;
-
-									case O2_VOLTAGE:    		// A * 0.005   (B-128) * 100/128 (if B==0xFF, sensor is not used in trim calc)
-									engine_data = message.data[3]*0.005;
-									sprintf(buffer,"%d v",(int) engine_data);
-							
-									case THROTTLE:				// Throttle Position
-									case RELATIVE_THROTTLE:
-									case CALC_ENGINE_LOAD:
-									engine_data = (message.data[3]*100)/255;
-									sprintf(buffer,"%d %% ",(int) engine_data);
-									break;
-
-                                    case PID_SUPPORT_01_20:
-                                    case PID_SUPPORT_21_40:
-                                    case PID_SUPPORT_41_60:
-                                    case PID_SUPPORT_61_80:
-                                    case PID_SUPPORT_81_A0:
-                                    case PID_SUPPORT_A1_C0:
-                                    case PID_SUPPORT_C1_E0:
-                                        byte2hex(message.data[3], buffer);
-                                        byte2hex(message.data[4], buffer+2);
-                                        byte2hex(message.data[5], buffer+4);
-                                        byte2hex(message.data[6], buffer+6);
-                                        break;
-							
-								}
-								message_ok = 1;
-							}
-
-					}
-				}
-				if(message_ok == 1) return 1;
-	}
-
-
- 	return 0;
+    while (timeout < 4000) {
+        timeout++;
+        if (mcp2515_check_message()) {
+            if (mcp2515_get_message(&message)) {
+                // If it's not a reply, try again.
+                if (message.id != PID_REPLY || message.data[2] != pid) continue;
+                data->pid = message.data[2];
+                data->A = message.data[3];
+                data->B = message.data[4];
+                data->C = message.data[5];
+                data->D = message.data[6];
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 
