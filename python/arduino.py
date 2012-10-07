@@ -46,7 +46,8 @@ class ArduinoSource(object):
 
     def _is_valid_frame(self, frame):
         return frame.sentinel_start == self.SENTINEL_VALUE and \
-                 frame.sentinel_end == self.SENTINEL_VALUE
+                 frame.sentinel_end == self.SENTINEL_VALUE and \
+                 0 <= frame.length <= 8
 
     def __iter__(self):
         self._synchronize()
