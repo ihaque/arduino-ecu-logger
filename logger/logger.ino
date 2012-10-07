@@ -3,6 +3,7 @@
 #include "defaults.h"
 #include "Canbus.h"
 #include "mcp2515.h"
+#include "pc_interface.h"
 extern CanbusClass Canbus;
 
 //#define FREE_MEMORY_MONITOR
@@ -80,12 +81,38 @@ void initCAN() {
     delay(500); 
 }
 
+void serialNegotiate(void) {
+    tCAN msg;
+    msg.id = 0x0001;
+    msg.header.rtr = 0;
+    msg.header.length = 3;
+    msg.data[0] = 80;
+    msg.data[1] = 8;
+    msg.data[2] = 50;
+    char buf[17];
+    clear_lcd();
+    while (1) {
+        sLCD.write(COMMAND);
+        sLCD.write(LINE0);
+        sprintf(buf, "%d", msg.id);
+        sLCD.write(buf);
+        upload_CAN_message(&msg);
+        msg.id++;
+        delay(250);
+    }
+}
+
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
     initJoy();
     initSD();
     initLCD(9600);
     clear_lcd();
+    //sLCD.write(COMMAND);
+    //sLCD.write(LINE0);
+    //sLCD.write("Initing...");
+    //delay(500);
+    //serialNegotiate();
     initCAN();
 
     Serial.println("ECU Reader");  /* For debug use */
@@ -283,11 +310,13 @@ void can_spy(void) {
     sLCD.print("Messages/sec:");
     while (get_CAN_msg(&msg, 10000U)) {
         msg_count++;
-        if (millis() - last_update > update_period) {
+        upload_CAN_message(&msg);
+        unsigned long tdelta = millis() - last_update;
+        if (tdelta > update_period) {
             sLCD.write(COMMAND);
             sLCD.write(LINE1);
             // TODO: the timing here is not correct
-            sprintf(buf, "%d", msg_count * (int) updates_per_sec);
+            sprintf(buf, "%d", (int) (msg_count / (tdelta / 1000.0)));
             sLCD.print(buf);
             msg_count = 0;
             last_update = millis();
