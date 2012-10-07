@@ -13,7 +13,7 @@ class ArduinoSource(object):
     SYNC_PACKETS = 2
     SENTINEL_VALUE = 0xAA
     FORMAT = "<BH?BxxxxxxxxB"
-    def __init__(portname, speed=115200):
+    def __init__(self, portname, speed=115200):
         port = Serial(baudrate=115200)
         try:
             port.setDTR(DTR_CONTROL_DISABLE)
@@ -35,7 +35,7 @@ class ArduinoSource(object):
     def _synchronize(self):
         zeros = 0
         while zeros < self.PACKET_SIZE * self.SYNC_PACKETS:
-            if ord(port.read()[0]) == 0:
+            if ord(self.port.read()[0]) == 0:
                 zeros += 1
             else:
                 zeros = 0
@@ -49,25 +49,25 @@ class ArduinoSource(object):
                  frame.sentinel_end == self.SENTINEL_VALUE
 
     def __iter__(self):
-        synchronize()
+        self._synchronize()
         consecutive_syncs = 0
         while True:
-            data = port.read(self.PACKET_SIZE)
-            if is_sync_packet(data):
+            data = self.port.read(self.PACKET_SIZE)
+            if self._is_sync_packet(data):
                 consecutive_syncs += 1
                 if consecutive_syncs == self.SYNC_PACKETS:
                     consecutive_syncs = 0
                 continue
             else:
-                if consecutive_sync_packets:
+                if consecutive_syncs:
                     # Got a data frame after an incorrect number of
                     # sync packets. Better resynchronize.
-                    synchronize()
-                    consecutive_sync_packets = 0
+                    self._synchronize()
+                    consecutive_syncs = 0
                     continue
-                frame = unpack_packet(data)
+                frame = self._unpack_packet(data)
                 if not self._is_valid_frame(frame):
                     # Erroneous packet. We must have desynchronized.
-                    synchronize()
+                    self._synchronize()
                     continue
                 yield frame

@@ -19,7 +19,6 @@ else:
 
 
 def main():
-    #source = cycle(TextSource(argv[1], ratelimit=600))
     source = ArduinoSource("COM7")
     sinks = [CursesSink(25, 80), LogSink(argv[1])]
     for frame in source:
