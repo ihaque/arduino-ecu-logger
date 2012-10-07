@@ -1,28 +1,59 @@
 #include "mcp2515.h"
 #include <Arduino.h>
-// 12b packet sent on serial wire.
-// Make sure syncLength is an integral multiple of that.
-const byte syncLength  = 2*12;
+
+#define ASSERT_CONCAT_(a, b) a##b
+#define ASSERT_CONCAT(a, b) ASSERT_CONCAT_(a, b)
+#define COMPILE_TIME_ASSERT(e) enum { ASSERT_CONCAT(assert_line_, __LINE__) = 1/(!!(e)) }
+
+
+typedef struct _serial_packet {
+    // Sentinel value to establish sync
+    byte sentinel_start;
+    // Little-endian CAN ID (16b)
+    byte can_id[2];
+    // 0 or 1
+    byte rtr;
+    // 0 to 8
+    byte length;
+    byte data[8];
+    byte sentinel_end;
+} serial_packet;
+
+// Constants shared with the Python PC-side interface
+const byte PACKET_SIZE = 14;
+// How many sync packets comprise a sync frame?
+const byte SYNC_PACKETS = 2;
+const byte SENTINEL_VALUE = 0xAA;
+
+// If you get an error here, make sure you've synchronized
+// the definitions of the constants with the structure, and
+// with the Python PC interface
+COMPILE_TIME_ASSERT(PACKET_SIZE == sizeof(serial_packet));
+
+// Tunable parameters in this module
+// Number of data packets we send between sending sync frames
+// Increase this for higher efficiency; decrease it
+//  - to reduce resync latency
+//  - if synchronization drift is a problem (frequent resyncs)
 const byte sends_per_sync = 127;
+// How many packets have we sent since last sync frame?
 static byte sends_since_sync = sends_per_sync;
 
 void upload_CAN_message(tCAN* msg) {
-    /* Message format
-     * 16b uint little-endian address 
-     * 8b uint rtr
-     * 8b uint length
-     * 64b data
-     */
-    byte i;
+    serial_packet packet;
     if (sends_since_sync == sends_per_sync) {
+        memset(&packet, 0, PACKET_SIZE);
         sends_since_sync = 0;
-        for (i = 0; i < syncLength; i++)
-            Serial.write((uint8_t)0);
+        for (byte i = 0; i < SYNC_PACKETS; i++)
+            Serial.write((byte*)&packet, PACKET_SIZE);
     }
-    Serial.write((byte)(msg->id & 0xFF));
-    Serial.write((byte)(msg->id >> 8));
-    Serial.write((byte)(msg->header.rtr));
-    Serial.write((byte)(msg->header.length));
-    Serial.write(msg->data, 8);
+    packet.sentinel_start = 0xAA;
+    packet.can_id[0] = msg->id & 0xff;
+    packet.can_id[1] = msg->id >> 8;
+    packet.rtr = msg->header.rtr;
+    packet.length = msg->header.length;
+    memcpy(packet.data, msg->data, 8);
+    packet.sentinel_end = 0xAA;
+    Serial.write((byte*)&packet, PACKET_SIZE);
     sends_since_sync++;
 }

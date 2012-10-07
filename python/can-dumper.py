@@ -19,13 +19,21 @@ def kbhit():
         inrdy, _, __ = select.select([sys.stdin], [], [], 0.001)
         return len(inrdy) > 0
 
-CANFrame = namedtuple('CANFrame', ['id', 'rtr', 'length', 'data'])
+CANFrame = namedtuple('CANFrame',
+            ['sentinel_start', 'id', 'rtr', 'length', 'data', 'sentinel_end'])
+
+
+def unpack_packet(data):
+    fmt = "<BH?BxxxxxxxxB"
+    (sentinel_start, can_id, rtr, length, sentinel_end) = unpack(fmt, data)
+    can_data = np.fromstring(data[5:13], dtype=np.uint8)[:length]
+    return CANFrame(sentinel_start, can_id, rtr, length, can_data, sentinel_end)
 
 
 def messages(port, verbose=False):
-    PACKET_SIZE = 12
+    PACKET_SIZE = 14
     SYNC_PACKETS = 2
-    msg_header_format = "<H?B"
+    SENTINEL_VALUE = 0xAA
     def synchronize():
         # Synchronize to the message frames
         consecutive_zeros = 0
@@ -50,8 +58,8 @@ def messages(port, verbose=False):
     synchronize()
     consecutive_sync_packets = 0
     while True:
-        packet = port.read(PACKET_SIZE)
-        if is_sync_packet(packet):
+        data = port.read(PACKET_SIZE)
+        if is_sync_packet(data):
             if verbose and not consecutive_sync_packets:
                 print "Discarding sync packet"
             consecutive_sync_packets += 1
@@ -65,14 +73,13 @@ def messages(port, verbose=False):
                 synchronize()
                 consecutive_sync_packets = 0
                 continue
-            (can_id, rtr, length) = unpack(msg_header_format, packet[:4])
-            data = np.fromstring(packet[4:12], dtype=np.uint8)
-            if length > 8 or length == 0:
+            packet = unpack_packet(data)
+            if packet.sentinel_start != SENTINEL_VALUE or \
+                packet.sentinel_end != SENTINEL_VALUE:
                 # Erroneous packet. We must have desynchronized.
                 synchronize()
                 continue
-            data = data[:length]
-            yield CANFrame(can_id, rtr, length, data)
+            yield packet
 
 def main():
     port = Serial(baudrate=115200)
