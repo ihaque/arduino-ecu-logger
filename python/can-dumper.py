@@ -22,7 +22,7 @@ def kbhit():
 CANFrame = namedtuple('CANFrame', ['id', 'rtr', 'length', 'data'])
 
 
-def messages(port):
+def messages(port, verbose=False):
     PACKET_SIZE = 12
     SYNC_PACKETS = 2
     msg_header_format = "<H?B"
@@ -30,7 +30,8 @@ def messages(port):
         # Synchronize to the message frames
         consecutive_zeros = 0
         iters = 0
-        print "Resynchronizing..."
+        if verbose:
+            print "Resynchronizing..."
         sync_start = time()
         while consecutive_zeros < PACKET_SIZE * SYNC_PACKETS:
             if ord(port.read()[0]) == 0:
@@ -38,7 +39,7 @@ def messages(port):
             else:
                 consecutive_zeros = 0
             iters += 1
-            if time() - sync_start > 1:
+            if verbose and time() - sync_start > 1:
                 print "Resynchronizing...(%d)" % iters
                 sync_start = time()
         #print "Successfully synchronized!"
@@ -51,9 +52,8 @@ def messages(port):
     while True:
         packet = port.read(PACKET_SIZE)
         if is_sync_packet(packet):
-            if not consecutive_sync_packets:
-                #print "Discarding sync packet"
-                pass
+            if verbose and not consecutive_sync_packets:
+                print "Discarding sync packet"
             consecutive_sync_packets += 1
             if consecutive_sync_packets == SYNC_PACKETS:
                 consecutive_sync_packets = 0
@@ -85,6 +85,50 @@ def main():
         print
     port.port = "COM7"
     port.open()
+    curses_view(port)
+
+def curses_view(port):
+    # Windows version of _curses at:
+    # http://www.lfd.uci.edu/~gohlke/pythonlibs/#curses
+    import curses
+    stdscr = curses.initscr()
+    curses.noecho()
+    curses.cbreak()
+    stdscr.keypad(1)
+    height = 25
+    win = curses.newwin(height, 80, 0, 0)
+
+    ids_seen = []
+    id_to_last_msg = {}
+    for msg in messages(port):
+        id_to_last_msg[msg.id] = msg
+        if msg.id not in ids_seen:
+            ids_seen.append(msg.id)
+            ids_seen.sort()
+            full_redraw = True
+        ids_to_draw = []
+        if full_redraw:
+            ids_to_draw.extend(ids_seen[:height])
+        elif ids_seen.index(id) < height:
+            ids_to_draw.append(id)
+
+        for id in ids_to_draw:
+            row = ids_seen.index(id)
+            msg = id_to_last_msg[id]
+            text = "%04X\t%s\t%d\t%s" % \
+                (msg.id, 'T' if msg.rtr else 'F', msg.length,
+                 "  ".join(map(lambda x: '%02X' % x, msg.data)))
+            win.addstr(row, 0, text)
+        win.refresh()
+        if kbhit():
+            while kbhit():
+                stdin.read(1)
+            break
+
+    curses.nocbreak(); stdscr.keypad(0); curses.echo()
+    curses.endwin()
+
+def dump_messages(port):
     cnt = 0
     for msg in messages(port):
         if msg.id == 0x04B0:

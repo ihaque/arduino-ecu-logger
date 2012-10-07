@@ -81,14 +81,15 @@ void initCAN() {
     delay(500); 
 }
 
-void serialNegotiate(void) {
+void simulate_serial_dump(void) {
     tCAN msg;
     msg.id = 0x0001;
     msg.header.rtr = 0;
-    msg.header.length = 3;
-    msg.data[0] = 80;
-    msg.data[1] = 8;
-    msg.data[2] = 50;
+    msg.header.length = 4;
+    msg.data[0] = 0x80;
+    msg.data[1] = 0x08;
+    msg.data[2] = 0x50;
+    msg.data[3] = 0x00;
     char buf[17];
     clear_lcd();
     while (1) {
@@ -97,8 +98,9 @@ void serialNegotiate(void) {
         sprintf(buf, "%d", msg.id);
         sLCD.write(buf);
         upload_CAN_message(&msg);
-        msg.id++;
-        delay(250);
+        msg.id = (msg.id * 907) % 23;
+        msg.data[3]++;
+        delay(25);
     }
 }
 
@@ -108,11 +110,6 @@ void setup() {
     initSD();
     initLCD(9600);
     clear_lcd();
-    //sLCD.write(COMMAND);
-    //sLCD.write(LINE0);
-    //sLCD.write("Initing...");
-    //delay(500);
-    //serialNegotiate();
     initCAN();
 
     Serial.println("ECU Reader");  /* For debug use */
@@ -122,7 +119,7 @@ void setup() {
     sLCD.print("D:CAN  U:SPY");
     sLCD.write(COMMAND);
     sLCD.write(LINE1); 
-    sLCD.print("L:PIDs R:LOG");
+    sLCD.print("L:PIDs R:SIM");
   
     while(1)
     {
@@ -141,8 +138,8 @@ void setup() {
             dump_pids();
         }
         if (digitalRead(RIGHT) == 0) {
-            Serial.println("Logging");
-            logging();
+            Serial.println("Simulator");
+            simulate_serial_dump();
         }
     }
   clear_lcd();
