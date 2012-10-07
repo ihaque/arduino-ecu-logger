@@ -94,6 +94,10 @@ void simulate_serial_dump(void) {
     msg.data[5] = 0xAD;
     msg.data[6] = 0xBE;
     msg.data[7] = 0xEF;
+    clear_lcd();
+    sLCD.write(COMMAND);
+    sLCD.write(LINE0);
+    sLCD.write("Simulating...");
     while (1) {
         upload_CAN_message(&msg);
         msg.id = (msg.id * 907) % 23;
