@@ -35,7 +35,7 @@ COMPILE_TIME_ASSERT(PACKET_SIZE == sizeof(serial_packet));
 // Increase this for higher efficiency; decrease it
 //  - to reduce resync latency
 //  - if synchronization drift is a problem (frequent resyncs)
-const byte sends_per_sync = 127;
+const byte sends_per_sync = 62;
 // How many packets have we sent since last sync frame?
 static byte sends_since_sync = sends_per_sync;
 

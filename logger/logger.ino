@@ -85,22 +85,20 @@ void simulate_serial_dump(void) {
     tCAN msg;
     msg.id = 0x0001;
     msg.header.rtr = 0;
-    msg.header.length = 4;
+    msg.header.length = 8;
     msg.data[0] = 0x80;
     msg.data[1] = 0x08;
     msg.data[2] = 0x50;
     msg.data[3] = 0x00;
-    char buf[17];
-    clear_lcd();
+    msg.data[4] = 0xDE;
+    msg.data[5] = 0xAD;
+    msg.data[6] = 0xBE;
+    msg.data[7] = 0xEF;
     while (1) {
-        sLCD.write(COMMAND);
-        sLCD.write(LINE0);
-        sprintf(buf, "%d", msg.id);
-        sLCD.write(buf);
         upload_CAN_message(&msg);
         msg.id = (msg.id * 907) % 23;
         msg.data[3]++;
-        delay(25);
+        //delay(5);
     }
 }
 
