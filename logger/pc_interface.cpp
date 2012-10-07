@@ -47,13 +47,13 @@ void upload_CAN_message(tCAN* msg) {
         for (byte i = 0; i < SYNC_PACKETS; i++)
             Serial.write((byte*)&packet, PACKET_SIZE);
     }
-    packet.sentinel_start = 0xAA;
-    packet.can_id[0] = msg->id & 0xff;
+    packet.sentinel_start = SENTINEL_VALUE;
+    packet.can_id[0] = msg->id & 0xFF;
     packet.can_id[1] = msg->id >> 8;
     packet.rtr = msg->header.rtr;
     packet.length = msg->header.length;
     memcpy(packet.data, msg->data, 8);
-    packet.sentinel_end = 0xAA;
+    packet.sentinel_end = SENTINEL_VALUE;
     Serial.write((byte*)&packet, PACKET_SIZE);
     sends_since_sync++;
 }
