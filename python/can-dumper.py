@@ -1,11 +1,14 @@
 from functools import partial
 from sys import argv
 from sys import stdin
+from sys import stdout
 from time import time
 
 from arduino import ArduinoSource
 from text_log import TextSource
-from binary_log import LogSink
+from text_log import TextSink
+from hdf5_log import HDF5Sink
+from hdf5_log import HDF5Source
 from console import CursesSink
 
 import platform
@@ -34,10 +37,13 @@ def broadcast(sinks, frame):
 
 
 def main():
-    source = ArduinoSource("COM7")
-    sinks = [CursesSink(25, 80), LogSink(argv[1])]
+    #source = ArduinoSource("COM7")
+    source = HDF5Source(argv[1])
+    #sinks = [CursesSink(25, 80), HDF5Sink(argv[1])]
+    sinks = [TextSink(stdout)]
     try:
-        map(partial(broadcast, sinks), source)
+        for i, frame in enumerate(source):
+            broadcast(sinks, frame)
     except KeyboardInterrupt:
         pass
 

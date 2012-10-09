@@ -23,3 +23,13 @@ class TextSource(object):
             last_returned = time()
             yield frame
 
+class TextSink(object):
+    def __init__(self, file):
+        self.file = file
+    def writeFrame(self, frame):
+        text = '%04X\t%s\t%d\t%s\n' % (frame.id,
+                'T' if frame.rtr else 'F',
+                frame.length,
+                "  ".join('%02X' % x for x in frame.data[:frame.length]))
+        self.file.write(text)
+        return
