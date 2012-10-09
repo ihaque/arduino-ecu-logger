@@ -16,9 +16,10 @@ class HDF5Frame(tables.IsDescription):
 _H5_LOG_TABLE = "CANFrames"
 
 class HDF5Source(object):
-    def __init__(self, filename, ratelimit=False):
+    def __init__(self, filename, ratelimit=False, timestamps=False):
         self.logfile = tables.openFile(filename, 'r')
         self.log = self.logfile.root._f_getChild(_H5_LOG_TABLE)
+        self.timestamps = timestamps
         self.rate_limit = ratelimit
 
     def __del__(self):
@@ -38,7 +39,11 @@ class HDF5Source(object):
             # Truncate data if necessary
             kwargs = dict((field, row[field]) for field in
                     ('sentinel_start', 'sentinel_end', 'rtr', 'length', 'id'))
-            yield CANFrame(data=row['data'][:row['length']], **kwargs)
+            frame = CANFrame(data=row['data'][:row['length']], **kwargs)
+            if self.timestamps:
+                yield row['timestamp'], frame
+            else:
+                yield frame
 
 
 class HDF5Sink(object):
