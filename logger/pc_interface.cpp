@@ -9,8 +9,10 @@
 typedef struct _serial_packet {
     // Sentinel value to establish sync
     byte sentinel_start;
+    // Sequence number
+    uint16_t sequence;
     // Little-endian CAN ID (16b)
-    byte can_id[2];
+    uint16_t can_id;
     // 0 or 1
     byte rtr;
     // 0 to 8
@@ -20,7 +22,7 @@ typedef struct _serial_packet {
 } serial_packet;
 
 // Constants shared with the Python PC-side interface
-const byte PACKET_SIZE = 14;
+const byte PACKET_SIZE = 16;
 // How many sync packets comprise a sync frame?
 const byte SYNC_PACKETS = 2;
 const byte SENTINEL_VALUE = 0xAA;
@@ -35,11 +37,12 @@ COMPILE_TIME_ASSERT(PACKET_SIZE == sizeof(serial_packet));
 // Increase this for higher efficiency; decrease it
 //  - to reduce resync latency
 //  - if synchronization drift is a problem (frequent resyncs)
-const byte sends_per_sync = 62;
+const byte sends_per_sync = 126;
 // How many packets have we sent since last sync frame?
 static byte sends_since_sync = sends_per_sync;
 
 void upload_CAN_message(tCAN* msg) {
+    static uint16_t sequence = 0;
     serial_packet packet;
     if (sends_since_sync == sends_per_sync) {
         memset(&packet, 0, PACKET_SIZE);
@@ -48,12 +51,13 @@ void upload_CAN_message(tCAN* msg) {
             Serial.write((byte*)&packet, PACKET_SIZE);
     }
     packet.sentinel_start = SENTINEL_VALUE;
-    packet.can_id[0] = msg->id & 0xFF;
-    packet.can_id[1] = msg->id >> 8;
+    packet.sequence = sequence;
+    packet.can_id = msg->id;
     packet.rtr = msg->header.rtr;
     packet.length = msg->header.length;
-    memcpy(packet.data, msg->data, 8);
+    memcpy(packet.data, msg->data, packet.length);
     packet.sentinel_end = SENTINEL_VALUE;
     Serial.write((byte*)&packet, PACKET_SIZE);
     sends_since_sync++;
+    sequence++;
 }

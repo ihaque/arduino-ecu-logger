@@ -100,14 +100,14 @@ void simulate_serial_dump(void) {
     sLCD.write("Simulating...");
     while (1) {
         upload_CAN_message(&msg);
-        msg.id = (msg.id * 907) % 23;
-        msg.data[3]++;
+        //msg.id = (msg.id * 907) % 23;
+        //msg.data[3]++;
         //delay(5);
     }
 }
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(250000);
     initJoy();
     initSD();
     initLCD(9600);
