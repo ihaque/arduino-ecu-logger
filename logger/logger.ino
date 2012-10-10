@@ -284,7 +284,7 @@ void dump_pids(void)
 bool get_CAN_msg(tCAN *pmsg, unsigned timeout_ms) {
     unsigned long start = millis();
     while (!mcp2515_check_message()) {
-        if ((millis() - start) > timeout_ms) return false;
+        if (timeout_ms && (millis() - start) > timeout_ms) return false;
     }
     mcp2515_get_message(pmsg);
     return true;
@@ -307,11 +307,11 @@ void can_spy(void) {
     sLCD.write(COMMAND);
     sLCD.write(LINE0);
     sLCD.print("Messages/sec:");
-    while (get_CAN_msg(&msg, 10000U)) {
+    while (get_CAN_msg(&msg, 0)) {
         msg_count++;
         upload_CAN_message(&msg);
-        unsigned long tdelta = millis() - last_update;
-        if (tdelta > update_period) {
+        //unsigned long tdelta = millis() - last_update;
+        if (false and tdelta > update_period) {
             sLCD.write(COMMAND);
             sLCD.write(LINE1);
             // TODO: the timing here is not correct
