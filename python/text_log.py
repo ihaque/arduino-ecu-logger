@@ -27,7 +27,8 @@ class TextSink(object):
     def __init__(self, file):
         self.file = file
     def writeFrame(self, frame):
-        text = '%04X\t%s\t%d\t%s\n' % (frame.id,
+        text = '%u\t%04X\t%s\t%d\t%s\n' % (frame.sequence,
+                frame.id,
                 'T' if frame.rtr else 'F',
                 frame.length,
                 "  ".join('%02X' % x for x in frame.data[:frame.length]))

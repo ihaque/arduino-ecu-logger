@@ -7,6 +7,7 @@ import numpy as np
 class HDF5Frame(tables.IsDescription):
     timestamp = tables.UInt64Col() # Microseconds
     sentinel_start = tables.UInt8Col()
+    sequence = tables.UInt16Col()
     id = tables.UInt16Col()
     rtr = tables.BoolCol()
     length = tables.UInt8Col()
@@ -38,7 +39,8 @@ class HDF5Source(object):
                 last_timestamp = row['timestamp']
             # Truncate data if necessary
             kwargs = dict((field, row[field]) for field in
-                    ('sentinel_start', 'sentinel_end', 'rtr', 'length', 'id'))
+                    ('sentinel_start', 'sentinel_end', 'rtr', 'length', 'id',
+                     'sequence'))
             frame = CANFrame(data=row['data'][:row['length']], **kwargs)
             if self.timestamps:
                 yield row['timestamp'], frame
@@ -65,6 +67,7 @@ class HDF5Sink(object):
         h5frame = self.log.row
         h5frame['timestamp'] = timestamp
         h5frame['sentinel_start'] = frame.sentinel_start
+        h5frame['sequence'] = frame.sequence
         h5frame['id'] = frame.id
         h5frame['rtr'] = frame.rtr
         h5frame['length'] = frame.length
