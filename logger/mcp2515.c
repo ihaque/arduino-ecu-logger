@@ -246,13 +246,7 @@ uint8_t mcp2515_get_message(tCAN *message)
 	}
 	SET(MCP2515_CS);
 	
-	// clear interrupt flag
-	if (bit_is_set(status, 6)) {
-		mcp2515_bit_modify(CANINTF, (1<<RX0IF), 0);
-	}
-	else {
-		mcp2515_bit_modify(CANINTF, (1<<RX1IF), 0);
-	}
+    // READ_RX automatically clears interrupt flag on CS so we don't need to
 	
 	return (status & 0x07) + 1;
 }
