@@ -292,40 +292,24 @@ bool get_CAN_msg(tCAN *pmsg, unsigned timeout_ms) {
 
 void can_spy(void) {
     tCAN msg;
-    unsigned long start = millis();
-    int msg_count = 0;
-    // 10fps
-    const int update_period = 100;
-    const int updates_per_sec = 1000 / update_period;
-    unsigned long last_update = start - update_period;
-    char buf[17];
-    start_spy:
-    #ifdef FREE_MEMORY_MONITOR
-    freeMemory();
-    #endif
-    clear_lcd();
-    sLCD.write(COMMAND);
-    sLCD.write(LINE0);
-    sLCD.print("Messages/sec:");
-    while (get_CAN_msg(&msg, 0)) {
-        msg_count++;
-        upload_CAN_message(&msg);
-        //unsigned long tdelta = millis() - last_update;
-        if (false and tdelta > update_period) {
-            sLCD.write(COMMAND);
-            sLCD.write(LINE1);
-            // TODO: the timing here is not correct
-            sprintf(buf, "%d", (int) (msg_count / (tdelta / 1000.0)));
-            sLCD.print(buf);
-            msg_count = 0;
-            last_update = millis();
+    uint16_t consec_fails = 0;
+    while (true) {
+        if (get_CAN_msg(&msg, 10)) {
+            consec_fails = 0;
+        } else {
+            // No frames received in 10ms. Dump a logging frame.
+            uint8_t read_status = mcp2515_read_status(SPI_READ_STATUS);
+            uint8_t rx_status = mcp2515_read_status(SPI_RX_STATUS);
+            consec_fails++;
+            msg.id = 0xFFFF;
+            msg.header.rtr = 0;
+            msg.header.length = 4;
+            msg.data[0] = read_status;
+            msg.data[1] = rx_status;
+            msg.data[2] = consec_fails >> 8;
+            msg.data[3] = consec_fails & 0xFF;
         }
-    }
-    sLCD.write(COMMAND);
-    sLCD.write(LINE1);
-    sLCD.print("None in 10 sec");
-    while (1) {
-      if (digitalRead(CLICK) == 0) goto start_spy;
+        upload_CAN_message(&msg);
     }
 }
 
