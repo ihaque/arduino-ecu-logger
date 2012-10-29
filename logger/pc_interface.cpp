@@ -9,6 +9,8 @@
 typedef struct _serial_packet {
     // Sentinel value to establish sync
     byte sentinel_start;
+    // Time at sender
+    uint32_t timestamp;
     // Sequence number
     uint16_t sequence;
     // Little-endian CAN ID (16b)
@@ -22,7 +24,7 @@ typedef struct _serial_packet {
 } serial_packet;
 
 // Constants shared with the Python PC-side interface
-const byte PACKET_SIZE = 16;
+const byte PACKET_SIZE = 20;
 // How many sync packets comprise a sync frame?
 const byte SYNC_PACKETS = 2;
 const byte SENTINEL_VALUE = 0xAA;
@@ -51,12 +53,13 @@ void upload_CAN_message(tCAN* msg) {
             Serial.write((byte*)&packet, PACKET_SIZE);
     }
     packet.sentinel_start = SENTINEL_VALUE;
+    packet.timestamp = millis();
     packet.sequence = sequence;
     packet.can_id = msg->id;
     packet.rtr = msg->header.rtr;
     packet.length = msg->header.length;
     memcpy(packet.data, msg->data, packet.length);
-    packet.sentinel_end = SENTINEL_VALUE;
+    packet.sentinel_end = ~SENTINEL_VALUE;
     Serial.write((byte*)&packet, PACKET_SIZE);
     sends_since_sync++;
     sequence++;
