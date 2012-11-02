@@ -1,13 +1,16 @@
-from serial import Serial
-from serial.win32 import DTR_CONTROL_DISABLE
 import numpy as np
 from struct import unpack
 from collections import namedtuple
 from time import time
 from sys import stderr
 
-CANFrame = namedtuple('CANFrame',
+_CANFrame_base = namedtuple('CANFrame',
         ['sentinel_start', 'sender_timestamp', 'sequence', 'id', 'rtr', 'length', 'data', 'sentinel_end'])
+
+class CANFrame(_CANFrame_base):
+    def __str__(self):
+        return "id=%04x, ts=%09d, seq=%07d, data=%s" % (self.id, self.sender_timestamp, self.sequence,
+            " ".join("%02x" % x for x in self.data[:self.length]))
 
 
 class ArduinoSource(object):
@@ -17,16 +20,24 @@ class ArduinoSource(object):
     END_SENTINEL_VALUE = 0x55 # unsigned ~0xAA
     FORMAT = "<BIHH?BxxxxxxxxB"
     def __init__(self, portname, speed=250000):
+        from serial import Serial
         port = Serial(baudrate=speed)
         try:
+            from serial.win32 import DTR_CONTROL_DISABLE
             port.setDTR(DTR_CONTROL_DISABLE)
+        except ImportError:
+            print "Warning: Can't use DTR_CONTROL_DISABLE except under Windows"
+            print
         except ValueError:
             print "Warning: pySerial 2.6 under Windows is too old"
             print "You must use a newer rev to avoid resetting the board"
             print "upon connection"
             print
         port.port = portname
+        print port
         port.open()
+        print port.__dict__
+        print port
         self.port = port
         self.last_synced = None
 
