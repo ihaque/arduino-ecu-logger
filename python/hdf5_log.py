@@ -7,6 +7,7 @@ import numpy as np
 class HDF5Frame(tables.IsDescription):
     timestamp = tables.UInt64Col() # Microseconds
     sentinel_start = tables.UInt8Col()
+    sender_timestamp = tables.UInt32Col()
     sequence = tables.UInt16Col()
     id = tables.UInt16Col()
     rtr = tables.BoolCol()
@@ -31,16 +32,15 @@ class HDF5Source(object):
         last_timestamp = float('inf')
         for row in self.log.iterrows():
             if self.rate_limit:
-                inter_frame_delay = row['timestamp'] - last_timestamp
+                inter_frame_delay = row['sender_timestamp'] - last_timestamp
                 cur_time = time()
-                if (cur_time - last_returned) * 1e6 < inter_frame_delay:
-                    sleep(inter_frame_delay/1e6 - (cur_time - last_returned))
+                if (cur_time - last_returned) * 1e3 < inter_frame_delay:
+                    sleep(inter_frame_delay/1e3 - (cur_time - last_returned))
                 last_returned = time()
-                last_timestamp = row['timestamp']
+                last_timestamp = row['sender_timestamp']
             # Truncate data if necessary
-            kwargs = dict((field, row[field]) for field in
-                    ('sentinel_start', 'sentinel_end', 'rtr', 'length', 'id',
-                     'sequence'))
+            kwargs = dict((field, row[field]) for field in HDF5Frame.columns
+                          if field not in ('data', 'timestamp'))
             frame = CANFrame(data=row['data'][:row['length']], **kwargs)
             if self.timestamps:
                 yield row['timestamp'], frame
@@ -66,6 +66,7 @@ class HDF5Sink(object):
         timestamp = int(time() * 1e6) - self.start_ts
         h5frame = self.log.row
         h5frame['timestamp'] = timestamp
+        h5frame['sender_timestamp'] = frame.sender_timestamp
         h5frame['sentinel_start'] = frame.sentinel_start
         h5frame['sequence'] = frame.sequence
         h5frame['id'] = frame.id
