@@ -18,7 +18,7 @@ class CursesSink(object):
         self.ids_seen = []
         self.id2lastframe = {}
         self.id2arrivals = defaultdict(list)
-        self.window_length = 15
+        self.window_length = 256
 
     def writeFrame(self, frame):
         self.id2lastframe[frame.id] = frame
@@ -47,12 +47,15 @@ class CursesSink(object):
             if len(arrivals) == 1:
                 rate = ""
             else:
-                fps = len(arrivals) / (arrivals[-1] - arrivals[0])
-                if fps < 1:
-                    rate = "% 5d ms/frame" % (1000.0 / fps)
+                if (arrivals[-1] == arrivals[0]):
+                    rate = "---"
                 else:
-                    rate = '%.1f' % fps
-                    rate = "% 5s frame/sec" % rate
+                    fps = len(arrivals) / (arrivals[-1] - arrivals[0])
+                    if fps < 1:
+                        rate = "% 5d ms/frame" % (1000.0 / fps)
+                    else:
+                        rate = '%.1f' % fps
+                        rate = "% 5s frame/sec" % rate
             datatext = "  ".join('%02X' % x for x in frame.data)
             datatext = datatext + (30 - len(datatext)) * " "
             text = "%04X\t%s\t%d\t%s\t%s" % \
