@@ -34,10 +34,7 @@ class ArduinoSource(object):
             print "upon connection"
             print
         port.port = portname
-        print port
         port.open()
-        print port.__dict__
-        print port
         self.port = port
         self.last_synced = None
 
