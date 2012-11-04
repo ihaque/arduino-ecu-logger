@@ -15,10 +15,12 @@ SoftwareSerial sLCD =  SoftwareSerial(0, CAN_BUS_LCD_TX);
 #define LINE1   0xC0
 
 // https://code.google.com/p/sdfatlib/
+#ifdef _USE_SD_
 #include <SdFat.h>
 #include <SdFile.h>
-
 SdFat _sdfat;
+#endif
+
 
 // TODO store error strings in flash to save RAM
 void error(const char* str) {
@@ -41,12 +43,14 @@ void initJoy(void) {
 }
 
 void initSD() {
+    #ifdef _USE_SD_
     pinMode(CAN_BUS_SD_CS, OUTPUT);
     if (!_sdfat.begin(CAN_BUS_SD_CS)) {
       Serial.println("SD initialization failed!");
       return;
     }
     Serial.println("SD initialization success");
+    #endif
     return;
 }
 
@@ -100,8 +104,8 @@ void simulate_serial_dump(void) {
     sLCD.write("Simulating...");
     while (1) {
         upload_CAN_message(&msg);
-        //msg.id = (msg.id * 907) % 23;
-        //msg.data[3]++;
+        msg.id = (msg.id * 907) % 23;
+        msg.data[3]++;
         //delay(5);
     }
 }
@@ -231,6 +235,9 @@ void logging(void) {
      
 void dump_pids(void)
 {
+    #ifndef _USE_SD_
+    sLCD.write("Compiled without SD support");
+    #else
     char buffer[17];
     clear_lcd(); 
     sLCD.print("SD test"); 
@@ -277,7 +284,7 @@ void dump_pids(void)
         fp.sync();
     }
     fp.close();
-   
+    #endif
     while(1);  /* Don't return */ 
 }
 
