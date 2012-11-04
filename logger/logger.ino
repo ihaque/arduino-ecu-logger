@@ -111,7 +111,7 @@ void simulate_serial_dump(void) {
 }
 
 void setup() {
-    Serial.begin(250000);
+    Serial.begin(115200);
     initJoy();
     initSD();
     initLCD(9600);
