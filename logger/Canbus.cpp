@@ -85,7 +85,6 @@ char CanbusClass::message_tx(void) {
 		mcp2515_bit_modify(CANCTRL, (1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0), 0);
 		
 	if (mcp2515_send_message(&message)) {
-		//	SET(LED2_HIGH);
 		return 1;
 	
 	}

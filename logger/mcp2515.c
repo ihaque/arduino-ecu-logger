@@ -265,7 +265,6 @@ uint8_t mcp2515_send_message(tCAN *message)
 	 */
 	uint8_t address;
 	uint8_t t;
-//	SET(LED2_HIGH);
 	if (bit_is_clear(status, 2)) {
 		address = 0x00;
 	}

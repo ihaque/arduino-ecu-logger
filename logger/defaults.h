@@ -37,8 +37,6 @@
 
 #define	MCP2515_CS			ARD_PIN_10
 #define	MCP2515_INT			ARD_PIN_2
-#define LED2_HIGH			ARD_PIN_8
-#define LED2_LOW			ARD_PIN_8
 
 // CANBus shield accessory pins
 #define CAN_BUS_LCD_TX 6
