@@ -37,10 +37,8 @@ def broadcast(sinks, frame):
 
 
 def main():
-    #source = ArduinoSource("COM7")
-    source = HDF5Source(argv[1])
-    #sinks = [CursesSink(25, 80), HDF5Sink(argv[1])]
-    sinks = [TextSink(stdout)]
+    source = ArduinoSource("COM7", speed=115200)
+    sinks = [CursesSink(25, 80)]
     try:
         for i, frame in enumerate(source):
             broadcast(sinks, frame)
