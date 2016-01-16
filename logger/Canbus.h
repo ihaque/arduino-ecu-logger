@@ -58,6 +58,8 @@ class CanbusClass
 	char message_rx(unsigned char *buffer);
 	char ecu_req(unsigned char pid,  char *buffer);
     char obd2_data(unsigned char pid, tOBD2 *data);
+    char obd2_lowlevel(unsigned char mode, unsigned char* inbytes,
+                       unsigned char inlen, tOBD2 *data);
 private:
 	
 };

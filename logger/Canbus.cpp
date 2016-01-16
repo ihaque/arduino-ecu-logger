@@ -153,21 +153,26 @@ char CanbusClass::ecu_req(unsigned char pid,  char *buffer)
 	}
 }
 
-char CanbusClass::obd2_data(unsigned char pid, tOBD2 *data)
+char CanbusClass::obd2_lowlevel(unsigned char mode, unsigned char* inbytes,
+                                unsigned char inlen, tOBD2 *data)
 {
 	tCAN message;
 	int timeout = 0;
 	char message_ok = 0;
 
+    // Validate message length
+    if (inlen > 6) return 0;
+
     // Set up request message
 	message.id = PID_REQUEST;
 	message.header.rtr = 0;
 	message.header.length = 8;
-	message.data[0] = 0x02;
-	message.data[1] = 0x01;
-	message.data[2] = pid;
-	message.data[3] = message.data[4] = message.data[5] = 0x00;
-    message.data[6] = message.data[7] = 0x00;
+	message.data[0] = 1 + inlen; // OBD2 message bytes: mode + data
+	message.data[1] = mode;
+    memset(message.data + 2, 0, 6);
+    if (inlen) {
+        memcpy(message.data + 2, inbytes, inlen);
+    }
 
 	mcp2515_bit_modify(CANCTRL, (1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0), 0);
 	mcp2515_send_message(&message);
@@ -177,7 +182,8 @@ char CanbusClass::obd2_data(unsigned char pid, tOBD2 *data)
         if (mcp2515_check_message()) {
             if (mcp2515_get_message(&message)) {
                 // If it's not a reply, try again.
-                if (message.id != PID_REPLY || message.data[2] != pid) continue;
+                if (message.id != PID_REPLY ||
+                    (mode != 3 && message.data[2] != pid)) continue;
                 data->pid = message.data[2];
                 data->A = message.data[3];
                 data->B = message.data[4];
@@ -188,12 +194,13 @@ char CanbusClass::obd2_data(unsigned char pid, tOBD2 *data)
         }
     }
     return 0;
+
 }
-
-
-
-
-
+char CanbusClass::obd2_data(unsigned char pid, tOBD2 *data)
+{
+    // Mode 1, request PID with no aux data.
+    return obd2_lowlevel(0x01, &pid, 1, data);
+}
 
 char CanbusClass::init(unsigned char speed) {
 
