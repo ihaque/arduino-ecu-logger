@@ -1,0 +1,23 @@
+# Arduino code for the ECU logger
+
+# Pin mappings
+* A0 - unused
+* A1 - CANshield up
+* A2 - CANshield right
+* A3 - CANshield down
+* A4 - CANshield click
+* A5 - CANshield left
+* 0 - HardwareSerial RX
+* 1 - HardwareSerial TX
+* 2 - MCP2515 interrupt
+* 3 - (unused)
+* 4 - (unused)
+* 5 - (unused)
+* 6 - CANshield LCD TX
+* 7 - (unused) CANshield LED1
+* 8 - (unused) CANshield LED2
+* 9 - CANshield SD CS
+* 10 - MCP2515 CS
+* 11 - SPI MOSI
+* 12 - SPI MISO
+* 13 - SPI SCK
