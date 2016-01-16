@@ -27,7 +27,7 @@ class CursesSink(object):
         if len(arrivals) > self.window_length:
             arrivals.pop(0)
 
-        full_redraw = False
+        full_redraw = True
         if frame.id not in self.ids_seen:
             self.ids_seen.append(frame.id)
             self.ids_seen.sort()
