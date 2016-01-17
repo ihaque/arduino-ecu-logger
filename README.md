@@ -9,6 +9,12 @@ Features:
 2. Computes fuel consumption/mpg and displays on attached serial LCD
 3. Dumps available OBD-II PIDs to microSD card
 
+- [arduino-ecu-logger](#)
+	- [Materials](#)
+	- [Arduino side](#)
+	- [PC side](#)
+	- [The RX-8 CAN-BUS](#)
+
 ![screenshot](https://raw.githubusercontent.com/ihaque/arduino-ecu-logger/master/screenshot.png)
 
 ## Materials
