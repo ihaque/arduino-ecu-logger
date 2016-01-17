@@ -1,16 +1,7 @@
 arduino-ecu-logger
 ==================
 
-**Table of Contents**
-
-- [arduino-ecu-logger](#)
-	- [Materials](#)
-	- [Arduino side](#)
-	- [PC side](#)
-	- [The RX-8 CAN](#)
-
 Arduino + CAN-BUS shield to monitor fuel consumption and other vehicle parameters. I first wrote this to get a fuel economy meter on my RX-8, and later worked to reverse engineer the messages streaming across the CAN-BUS to see what sensor data is available on the car.
-
 
 Features:
 
@@ -19,6 +10,14 @@ Features:
 3. Dumps available OBD-II PIDs to microSD card
 
 ![screenshot](https://raw.githubusercontent.com/ihaque/arduino-ecu-logger/master/screenshot.png)
+
+**Table of Contents**
+
+- [arduino-ecu-logger](#)
+	- [Materials](#)
+	- [Arduino side](#)
+	- [PC side](#)
+	- [The RX-8 CAN](#)
 
 ## Materials
 1. Arduino Uno
