@@ -4,6 +4,7 @@ arduino-ecu-logger
 Arduino + CAN-BUS shield to monitor fuel consumption and other vehicle parameters.
 
 Features:
+
 1. Live streaming of CAN-BUS content over serial link to connected PC (with logging and viewing software on PC side)
 2. Computes fuel consumption/mpg and displays on attached serial LCD
 3. Dumps available OBD-II PIDs to microSD card
@@ -20,6 +21,7 @@ Features:
 ## Description
 ### Arduino side
 The Arduino can operate in one of four modes, selected on bootup using the joystick:
+
 1. (down): live vehicle stats. Show MAF-based fuel efficiency (mpg) and consumption (oz/hr) on line 1 of LCD; coolant temperature and throttle position on line 2.
 2. (up): CAN spy. Stream CAN-BUS frames over serial connection to attached PC for logging, reverse engineering, and analysis.
 3. (left): query ECU for supported OBD-2 PIDs and write to microSD card.
