@@ -39,7 +39,7 @@ Hardware pin connections are described in logger/README.
 The PC interface uses a custom framing protocol for high-speed reliable transmission of CAN frames to the PC. Once every 127 frames, a synchronization frame is sent over the wire; each frame starts with a sentinel byte, and each frame is protected by a CRC8.
 
 ## PC side
-python/can-dumper.py supports reading CAN frames either from a serial-connected Arduino (python/arduino.py:ArduinoSource) or from an on-disk log (python/hdf5_log.py:HDF5Source), and can stream frames simultaneously to a number of outputs, including an on-disk log or a curses-based live display of different CAN-BUS addresses.
+python/can-dumper.py supports reading CAN frames either from a serial-connected Arduino (python/arduino.py:ArduinoSource) or from an on-disk log (python/hdf5_log.py:HDF5Source), and can stream frames simultaneously to a number of outputs, including an on-disk log or a curses-based live display of different CAN-BUS addresses. A demo logfile is available to play with the viewer; run `python can-dumper.py example_log.h5`.
 
 The curses interface is shown below:
 ![screenshot](https://raw.githubusercontent.com/ihaque/arduino-ecu-logger/master/screenshot.png)
